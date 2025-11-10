@@ -1,20 +1,47 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_COLUMN 100
+#define MAX 100
+#define MAX_HASH_CODE_LEN 1000
 
-//REMOVER DEPOIS
-//REMOVER DEPOIS
-//REMOVER DEPOIS
-//REMOVER DEPOIS
-//REMOVER DEPOIS
-void printMatriz(char matriz[][MAX_COLUMN], int height, int width) {
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            printf("%c", matriz[i][j]); // imprime cada caractere
-        }
-        printf("\n"); // quebra de linha ao fim de cada linha da matriz
+
+int ler_pbm(const char *nome_arquivo, char imagem[MAX][MAX], int *altura, int *largura) {
+    FILE *arquivo = fopen(nome_arquivo, "r");
+    if (!arquivo) {
+        printf("Erro ao abrir o arquivo %s\n", nome_arquivo);
+        return 0;
     }
+
+    char linha[256];
+    fgets(linha, sizeof(linha), arquivo);
+    if (strncmp(linha, "P1", 2) != 0) {
+        printf("Formato inválido (esperado P1)\n");
+        fclose(arquivo);
+        return 0;
+    }
+
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        if (linha[0] == '#') continue;
+        if (sscanf(linha, "%d %d", largura, altura) == 2) break;
+    }
+
+    int valor;
+    for (int i = 0; i < *altura; i++) {
+        for (int j = 0; j < *largura; j++) {
+            if (fscanf(arquivo, "%d", &valor) == 1)
+                imagem[i][j] = (valor == 0) ? 'B' : 'P';
+            else {
+                printf("Erro na leitura dos pixels.\n");
+                fclose(arquivo);
+                return 0;
+            }
+        }
+    }
+
+    fclose(arquivo);
+    return 1;
 }
 
 void getQuadrant(char matriz[][MAX_COLUMN], int beginL, int beginC, int height, int width, char quadrant[][MAX_COLUMN]) {
@@ -27,103 +54,99 @@ void getQuadrant(char matriz[][MAX_COLUMN], int beginL, int beginC, int height, 
 }
 
 void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode[]){
-    // calcula o tamanho da imagem em qtd de bits --- necessário colocar *10 para margem de segurança (pesquisado devido a erro)
-    int totalBits = sizeof(matriz[0][0]) * height * width * 10;
-    int positionHashCode = 0;
+    hashCode[0];
 
-    //REMOVER DEPOIS
-    //REMOVER DEPOIS
-    //REMOVER DEPOIS
-    //REMOVER DEPOIS
-    //REMOVER DEPOIS
-    printMatriz(matriz, height, width);
-
-    //percorre toda a matriz buscando se ela é toda preta ou branca
-    int allTheSame = 1;
-    char baseColor = 'B';
-    for (int counter = 0; counter < width && allTheSame; counter++)
-    {
-        for (int sub_counter = 0;sub_counter < height && allTheSame;sub_counter++){
-            if(matriz[counter][sub_counter] != baseColor){
-                //testa se é o primeiro elemento de todos, se for há tempo de mudar para outra cor
-                if(counter == 0 && sub_counter == 0) {
-                    baseColor = 'W';
-                }
-                else {
-                    baseColor = 'W';
-                    allTheSame = 0;
-                    break;
-                }
+    //valida se é uma matriz inexistente
+    if (height == 0 || width == 0) {
+        strcpy(hashCode, ""); 
+        return;
+    }
+    //percorre toda a matriz buscando se ela é branca
+    int allWhite = 1;
+    for (int counter = 0; counter < height && allWhite; counter++){
+        for (int sub_counter = 0;sub_counter < width && allWhite;sub_counter++){
+            if(matriz[counter][sub_counter] != 'B'){
+                allWhite = 0;
+                break;
             }
         }
+        if(!allWhite) break;
+    }
+    if(allWhite == 1){
+        strcpy(hashCode, "B");
+        return;
     }
 
-    //valida se são todos da mesma cor, caso contrário é divido
-    if(allTheSame == 1){
-        hashCode[positionHashCode] = baseColor;
-        positionHashCode++;
-        hashCode[positionHashCode] = '\0';
-    } 
-    else{
-        hashCode[positionHashCode++] = 'X';
-        hashCode[positionHashCode] = '\0';
-        positionHashCode++;
-        // consigo os valores dos quais serao capazes de dividir a matriz em 4
-        int half_height = (height + 1) / 2; 
-        int half_widht = (width + 1) / 2;
-        
-        // Quadrantes
-        char q1[MAX_COLUMN][MAX_COLUMN];
-        char q2[MAX_COLUMN][MAX_COLUMN];
-        char q3[MAX_COLUMN][MAX_COLUMN];
-        char q4[MAX_COLUMN][MAX_COLUMN];
-
-        printf("---------\n");
-
-        //first 
-        getQuadrant(matriz, 0, 0, half_height, half_widht, q1);
-        //second
-        getQuadrant(matriz, half_height, 0, height - half_height, half_widht, q2);
-        //third
-        getQuadrant(matriz, 0, half_widht, half_height, width - half_widht, q3);
-        //fourth
-        getQuadrant(matriz, half_height, half_widht, height - half_height, width - half_widht, q4);
-
-	// Hashes de cada quadrante
-        char h1[totalBits];
-        char h2[totalBits];
-        char h3[totalBits];
-        char h4[totalBits];
-
-        getHashCode(q1, half_height, half_widht, h1);
-        getHashCode(q2, height - half_height, half_widht, h2);
-        getHashCode(q3, half_height, width - half_widht, h3);
-        getHashCode(q4, height - half_height, width - half_widht, h4);
-
-        strcat(hashCode, h1);
-        strcat(hashCode, h2);
-        strcat(hashCode, h3);
-        strcat(hashCode, h4);
+    //percorre toda a matriz buscando se ela é preta
+    int allBlack = 1;
+    for (int counter = 0; counter < height && allBlack; counter++){
+        for (int sub_counter = 0;sub_counter < width && allBlack;sub_counter++){
+            if(matriz[counter][sub_counter] != 'P'){
+                allBlack = 0;
+                break;
+            }
+        }
+        if(!allBlack) break;
     }
+    if(allBlack == 1){
+        strcpy(hashCode, "P");
+        return;
+    }
+
+    strcpy(hashCode, "X");
+    // consigo os valores dos quais serao capazes de dividir a matriz em 4
+    int half_height = (height + 1) / 2;
+    int half_width = (width + 1) / 2;
+
+    // Quadrantes
+    char q1[MAX_COLUMN][MAX_COLUMN];
+    char q2[MAX_COLUMN][MAX_COLUMN];
+    char q3[MAX_COLUMN][MAX_COLUMN];
+    char q4[MAX_COLUMN][MAX_COLUMN];
+
+    //first
+    getQuadrant(matriz, 0, 0, half_height, half_width, q1);
+    //second
+    getQuadrant(matriz, half_height, 0, height - half_height, half_width, q2);
+    //third
+    getQuadrant(matriz, 0, half_width, half_height, width - half_width, q3);
+    //fourth
+    getQuadrant(matriz, half_height, half_width, height - half_height, width - half_width, q4);
+
+// Hashes de cada quadrante
+    char h1[MAX_HASH_CODE_LEN];
+    char h2[MAX_HASH_CODE_LEN];
+    char h3[MAX_HASH_CODE_LEN];
+    char h4[MAX_HASH_CODE_LEN];
+
+    getHashCode(q1, half_height, half_width, h1);
+    getHashCode(q2, height - half_height, half_width, h2);
+    getHashCode(q3, half_height, width - half_width, h3);
+    getHashCode(q4, height - half_height, width - half_width, h4);
+
+    strcat(hashCode, h1);
+    strcat(hashCode, h3);
+    strcat(hashCode, h2);
+    strcat(hashCode, h4);
 }
 
-int main(){
-    /*char matriz[4][MAX_COLUMN] = {
-        {'B', 'B', 'W', 'B', 'W'},
-        {'B', 'B', 'W', 'W', 'B'},
-        {'W', 'W', 'B', 'B', 'B'}
-    };*/
+int main(int argc, char *argv[]) {
+    char imagem[MAX][MAX];
+    int altura, largura;
 
-    char matriz[4][MAX_COLUMN] = {
-        {'W', 'W', 'B'},
-        {'W', 'B', 'B'},
-        {'W', 'W', 'B'} 
-    };
+    if (argc != 3 || strcmp(argv[1], "-f") != 0) {
+        printf("Uso: %s -f arquivo.pbm\n", argv[0]);
+        return 1;
+    }
 
-    char hashCode[1000];
-    getHashCode(matriz, 3, 3, hashCode);
+    if (!ler_pbm(argv[2], imagem, &altura, &largura)) {
+        printf("Falha ao ler o arquivo PBM.\n");
+        return 1;
+    }
 
-    printf("Hash gerado: %s\n", hashCode);
+    char hashCode[MAX_HASH_CODE_LEN] = "";
+    getHashCode(imagem, altura, largura, hashCode);
 
+    printf("\nCódigo gerado: %s\n", hashCode);
     return 0;
 }
