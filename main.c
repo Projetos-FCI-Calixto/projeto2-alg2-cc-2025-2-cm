@@ -3,11 +3,11 @@
 #include <string.h>
 
 #define MAX_COLUMN 100
-#define MAX 100
-#define MAX_HASH_CODE_LEN 1000
+#define MAX_WIDTH 100
+#define MAX_HASH_CODE_LEN 200
 
 
-int ler_pbm(const char *nome_arquivo, char imagem[MAX][MAX], int *altura, int *largura) {
+int ler_pbm(const char *nome_arquivo, char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
     FILE *arquivo = fopen(nome_arquivo, "r");
     if (!arquivo) {
         printf("Erro ao abrir o arquivo %s\n", nome_arquivo);
@@ -23,7 +23,7 @@ int ler_pbm(const char *nome_arquivo, char imagem[MAX][MAX], int *altura, int *l
     }
 
     while (fgets(linha, sizeof(linha), arquivo)) {
-        if (linha[0] == '#') continue;
+        if  (linha[0] == '#') continue;
         if (sscanf(linha, "%d %d", largura, altura) == 2) break;
     }
 
@@ -31,7 +31,7 @@ int ler_pbm(const char *nome_arquivo, char imagem[MAX][MAX], int *altura, int *l
     for (int i = 0; i < *altura; i++) {
         for (int j = 0; j < *largura; j++) {
             if (fscanf(arquivo, "%d", &valor) == 1)
-                imagem[i][j] = (valor == 0) ? 'B' : 'P';
+                imagem[i][j] = (valor == 0) ? '0' : '1';
             else {
                 printf("Erro na leitura dos pixels.\n");
                 fclose(arquivo);
@@ -65,7 +65,7 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
     int allWhite = 1;
     for (int counter = 0; counter < height && allWhite; counter++){
         for (int sub_counter = 0;sub_counter < width && allWhite;sub_counter++){
-            if(matriz[counter][sub_counter] != 'B'){
+            if(matriz[counter][sub_counter] != '0'){
                 allWhite = 0;
                 break;
             }
@@ -81,7 +81,7 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
     int allBlack = 1;
     for (int counter = 0; counter < height && allBlack; counter++){
         for (int sub_counter = 0;sub_counter < width && allBlack;sub_counter++){
-            if(matriz[counter][sub_counter] != 'P'){
+            if(matriz[counter][sub_counter] != '1'){
                 allBlack = 0;
                 break;
             }
@@ -99,10 +99,10 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
     int half_width = (width + 1) / 2;
 
     // Quadrantes
-    char q1[MAX_COLUMN][MAX_COLUMN];
-    char q2[MAX_COLUMN][MAX_COLUMN];
-    char q3[MAX_COLUMN][MAX_COLUMN];
-    char q4[MAX_COLUMN][MAX_COLUMN];
+    char q1[MAX_WIDTH][MAX_COLUMN];
+    char q2[MAX_WIDTH][MAX_COLUMN];
+    char q3[MAX_WIDTH][MAX_COLUMN];
+    char q4[MAX_WIDTH][MAX_COLUMN];
 
     //first
     getQuadrant(matriz, 0, 0, half_height, half_width, q1);
@@ -131,8 +131,19 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
 }
 
 int main(int argc, char *argv[]) {
-    char imagem[MAX][MAX];
+    char imagem[MAX_WIDTH][MAX_COLUMN];
     int altura, largura;
+
+    // Verifica se o usuário pediu ajuda
+    if (argc == 2 && (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "--help") == 0)) {
+        printf("Uso: %s [opções]\n", argv[0]);
+        printf("Codifica imagens binárias dadas em arquivos PBM ou por dados informados manualmente.\n\n");
+        printf("Opções:\n");
+        printf("  -?, --help     : mostra esta ajuda na tela.\n");
+        printf("  -m, --manual   : ativa o modo de entrada manual (via teclado).\n");
+        printf("  -f <arquivo>   : lê e codifica a imagem do arquivo PBM informado.\n");
+        return 0;
+    }
 
     if (argc != 3 || strcmp(argv[1], "-f") != 0) {
         printf("Uso: %s -f arquivo.pbm\n", argv[0]);
