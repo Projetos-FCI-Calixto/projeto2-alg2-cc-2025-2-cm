@@ -4,7 +4,7 @@
 
 #define MAX_COLUMN 768 // O limite para a ALTURA (linhas)
 #define MAX_WIDTH 1024 // O limite para a LARGURA (colunas)
-#define MAX_HASH_CODE_LEN 200
+#define MAX_HASH_CODE_LEN 200 //// Tamanho máximo permitido para o código hash
 
 int ler_manual(char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
     printf("--- Modo de Entrada Manual ---\n");
@@ -45,26 +45,30 @@ int ler_manual(char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
     return 1;
 }
 
+// Lê um arquivo PBM (formato P1) e preenche a matriz 'imagem'
 int ler_pbm(const char *nome_arquivo, char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
+    // Abre o arquivo para leitura
     FILE *arquivo = fopen(nome_arquivo, "r");
     if (!arquivo) {
         printf("Erro ao abrir o arquivo %s\n", nome_arquivo);
         return 0;
     }
-
+    // Lê a primeira linha do arquivo (deve ser "P1")
     char linha[256];
     fgets(linha, sizeof(linha), arquivo);
+    // Verifica se o formato é válido
     if (strncmp(linha, "P1", 2) != 0) {
         printf("Formato inválido (esperado P1)\n");
         fclose(arquivo);
         return 0;
     }
-
+    // Procura a linha que contém a largura e altura
     while (fgets(linha, sizeof(linha), arquivo)) {
         if  (linha[0] == '#') continue;
         if (sscanf(linha, "%d %d", largura, altura) == 2) break;
     }
 
+    // Lê cada pixel da imagem PBM
     int valor;
     for (int i = 0; i < *altura; i++) {
         for (int j = 0; j < *largura; j++) {
@@ -77,7 +81,7 @@ int ler_pbm(const char *nome_arquivo, char imagem[MAX_WIDTH][MAX_COLUMN], int *a
             }
         }
     }
-
+    // Fecha o arquivo e retorna sucesso
     fclose(arquivo);
     return 1;
 }
