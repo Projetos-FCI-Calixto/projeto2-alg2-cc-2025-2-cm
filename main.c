@@ -2,10 +2,48 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_COLUMN 100
-#define MAX_WIDTH 100
+#define MAX_COLUMN 768 // O limite para a ALTURA (linhas)
+#define MAX_WIDTH 1024 // O limite para a LARGURA (colunas)
 #define MAX_HASH_CODE_LEN 200
 
+int ler_manual(char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
+    printf("--- Modo de Entrada Manual ---\n");
+    printf("Digite a altura da matriz (max %d): ", MAX_WIDTH);
+    // Leitura da Altura
+    if (scanf("%d", altura) != 1 || *altura <= 0 || *altura > MAX_WIDTH) {
+        printf("Altura inválida ou fora do limite (1 a %d).\n", MAX_WIDTH);
+        return 0;
+    }
+
+    printf("Digite a largura da matriz (max %d): ", MAX_COLUMN);
+    // Leitura da Largura
+    if (scanf("%d", largura) != 1 || *largura <= 0 || *largura > MAX_COLUMN) {
+        printf("Largura inválida ou fora do limite (1 a %d).\n", MAX_COLUMN);
+        return 0;
+    }
+
+    printf("Digite os pixels (0s e 1s) linha por linha, separados por espaco:\n");
+    
+    // Leitura dos Pixels
+    for (int i = 0; i < *altura; i++) {
+        printf("Linha %d (%d pixels): ", i + 1, *largura);
+        for (int j = 0; j < *largura; j++) {
+            int valor;
+            if (scanf("%d", &valor) != 1) {
+                printf("Erro na leitura do pixel na linha %d, coluna %d.\n", i + 1, j + 1);
+                return 0;
+            }
+            if (valor != 0 && valor != 1) {
+                printf("Pixel inválido na linha %d, coluna %d. Use apenas 0 ou 1.\n", i + 1, j + 1);
+                return 0;
+            }
+            // Converte o inteiro lido para o caractere ('0' ou '1')
+            imagem[i][j] = (valor == 0) ? '0' : '1';
+        }
+    }
+
+    return 1;
+}
 
 int ler_pbm(const char *nome_arquivo, char imagem[MAX_WIDTH][MAX_COLUMN], int *altura, int *largura) {
     FILE *arquivo = fopen(nome_arquivo, "r");
@@ -98,11 +136,17 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
     int half_height = (height + 1) / 2;
     int half_width = (width + 1) / 2;
 
+    int altura_q1_q2 = (height + 1) / 2; // Altura superior (Q1, Q2)
+    int altura_q3_q4 = height - altura_q1_q2; // Altura inferior (Q3, Q4)
+
+    int largura_q1_q3 = (width + 1) / 2; // Largura esquerda (Q1, Q3)
+    int largura_q2_q4 = width - largura_q1_q3; // Largura direita (Q2, Q4)
+
     // Quadrantes
-    char q1[MAX_WIDTH][MAX_COLUMN];
-    char q2[MAX_WIDTH][MAX_COLUMN];
-    char q3[MAX_WIDTH][MAX_COLUMN];
-    char q4[MAX_WIDTH][MAX_COLUMN];
+    char q1[altura_q1_q2][largura_q1_q3]; //Sup-Esq
+    char q2[altura_q1_q2][largura_q2_q4]; //Sup-Dir
+    char q3[altura_q3_q4][largura_q1_q3]; //Inf-Esq
+    char q4[altura_q3_q4][largura_q2_q4]; //Inf-Dir
 
     //first
     getQuadrant(matriz, 0, 0, half_height, half_width, q1);
@@ -132,10 +176,11 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
 
 int main(int argc, char *argv[]) {
     char imagem[MAX_WIDTH][MAX_COLUMN];
-    int altura, largura;
+    int altura, largura, sucesso;
+    
 
     // Verifica se o usuário pediu ajuda
-    if (argc == 2 && (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "--help") == 0)) {
+    if (argc == 1 || (argc == 2 && (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "--help") == 0))) {
         printf("Uso: %s [opções]\n", argv[0]);
         printf("Codifica imagens binárias dadas em arquivos PBM ou por dados informados manualmente.\n\n");
         printf("Opções:\n");
@@ -145,14 +190,28 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    if (argc != 3 || strcmp(argv[1], "-f") != 0) {
-        printf("Uso: %s -f arquivo.pbm\n", argv[0]);
-        return 1;
+    //estrutura de controle para os modos de entrada
+
+    // 1. MODO MANUAL (-m)
+    if (argc == 2 && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--manual") == 0)) {
+        sucesso = ler_manual(imagem, &altura, &largura);
+    }
+    // 2. MODO ARQUIVO (-f <arquivo>)
+    else if (argc == 3 && strcmp(argv[1], "-f") == 0) {
+        sucesso = ler_pbm(argv[2], imagem, &altura, &largura);
+    }
+    // 3. ARGUMENTOS INVÁLIDOS
+    else {
+        printf("Uso inválido.\n");
+        printf("Uso para arquivo: %s -f arquivo.pbm\n", argv[0]);
+        printf("Uso para entrada manual: %s -m\n", argv[0]);
+        return 1; // Sai do programa com erro
     }
 
-    if (!ler_pbm(argv[2], imagem, &altura, &largura)) {
-        printf("Falha ao ler o arquivo PBM.\n");
-        return 1;
+    // Verifica se a leitura (de qualquer modo) foi bem-sucedida
+    if (!sucesso) {
+        printf("Falha ao ler a imagem.\n");
+        return 1; // Sai do programa com erro
     }
 
     char hashCode[MAX_HASH_CODE_LEN] = "";
