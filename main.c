@@ -86,16 +86,7 @@ int ler_pbm(const char *nome_arquivo, char imagem[MAX_WIDTH][MAX_COLUMN], int *a
     return 1;
 }
 
-void getQuadrant(char matriz[][MAX_COLUMN], int beginL, int beginC, int height, int width, char quadrant[][MAX_COLUMN]) {
-    //dividir os quadrantes em diferentes matrizes
-    for (int line = 0; line < height; line++) {
-        for (int column = 0; column < width; column++) {
-            quadrant[line][column] = matriz[beginL + line][beginC + column];
-        }
-    }
-}
-
-void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode[]){
+void getHashCode(char matriz[][MAX_COLUMN], int beginL, int beginC, int height, int width, char hashCode[]){
     hashCode[0];
 
     //valida se é uma matriz inexistente
@@ -105,8 +96,8 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
     }
     //percorre toda a matriz buscando se ela é branca
     int allWhite = 1;
-    for (int counter = 0; counter < height && allWhite; counter++){
-        for (int sub_counter = 0;sub_counter < width && allWhite;sub_counter++){
+    for (int counter = beginL; counter <  beginL + height && allWhite; counter++){
+        for (int sub_counter = beginC;sub_counter < beginC + width && allWhite;sub_counter++){
             if(matriz[counter][sub_counter] != '0'){
                 allWhite = 0;
                 break;
@@ -121,8 +112,8 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
 
     //percorre toda a matriz buscando se ela é preta
     int allBlack = 1;
-    for (int counter = 0; counter < height && allBlack; counter++){
-        for (int sub_counter = 0;sub_counter < width && allBlack;sub_counter++){
+    for (int counter = beginL; counter < beginL + height && allBlack; counter++){
+        for (int sub_counter = beginC;sub_counter < beginC + width && allBlack;sub_counter++){
             if(matriz[counter][sub_counter] != '1'){
                 allBlack = 0;
                 break;
@@ -137,45 +128,29 @@ void getHashCode(char matriz[][MAX_COLUMN], int height, int width, char hashCode
 
     strcpy(hashCode, "X");
     // consigo os valores dos quais serao capazes de dividir a matriz em 4
-    int half_height = (height + 1) / 2;
-    int half_width = (width + 1) / 2;
+    // Calcula dimensões e posições dos 4 sub-quadrantes
+    int h1 = (height + 1) / 2; // Altura Sup (Q1, Q3)
+    int h2 = height - h1;      // Altura Inf (Q2, Q4)
+    int w1 = (width + 1) / 2;  // Largura Esq (Q1, Q2)
+    int w2 = width - w1;       // Largura Dir (Q3, Q4)
 
-    int altura_q1_q2 = (height + 1) / 2; // Altura superior (Q1, Q2)
-    int altura_q3_q4 = height - altura_q1_q2; // Altura inferior (Q3, Q4)
+    // Hashes de cada quadrante (alocados na pilha, mas são pequenos)
+    char h1_hash[MAX_HASH_CODE_LEN];
+    char h2_hash[MAX_HASH_CODE_LEN];
+    char h3_hash[MAX_HASH_CODE_LEN];
+    char h4_hash[MAX_HASH_CODE_LEN];
 
-    int largura_q1_q3 = (width + 1) / 2; // Largura esquerda (Q1, Q3)
-    int largura_q2_q4 = width - largura_q1_q3; // Largura direita (Q2, Q4)
+    // A ordem de concatenação do seu código original era h1, h3, h2, h4
+    getHashCode(matriz, beginL, beginC, h1, w1, h1_hash);
+    getHashCode(matriz, beginL, beginC + w1, h1, w2, h3_hash);   
+    getHashCode(matriz, beginL + h1, beginC, h2, w1, h2_hash);
+    getHashCode(matriz, beginL + h1, beginC + w1, h2, w2, h4_hash);
 
-    // Quadrantes
-    char q1[altura_q1_q2][largura_q1_q3]; //Sup-Esq
-    char q2[altura_q1_q2][largura_q2_q4]; //Sup-Dir
-    char q3[altura_q3_q4][largura_q1_q3]; //Inf-Esq
-    char q4[altura_q3_q4][largura_q2_q4]; //Inf-Dir
 
-    //first
-    getQuadrant(matriz, 0, 0, half_height, half_width, q1);
-    //second
-    getQuadrant(matriz, half_height, 0, height - half_height, half_width, q2);
-    //third
-    getQuadrant(matriz, 0, half_width, half_height, width - half_width, q3);
-    //fourth
-    getQuadrant(matriz, half_height, half_width, height - half_height, width - half_width, q4);
-
-// Hashes de cada quadrante
-    char h1[MAX_HASH_CODE_LEN];
-    char h2[MAX_HASH_CODE_LEN];
-    char h3[MAX_HASH_CODE_LEN];
-    char h4[MAX_HASH_CODE_LEN];
-
-    getHashCode(q1, half_height, half_width, h1);
-    getHashCode(q2, height - half_height, half_width, h2);
-    getHashCode(q3, half_height, width - half_width, h3);
-    getHashCode(q4, height - half_height, width - half_width, h4);
-
-    strcat(hashCode, h1);
-    strcat(hashCode, h3);
-    strcat(hashCode, h2);
-    strcat(hashCode, h4);
+    strcat(hashCode, h1_hash);
+    strcat(hashCode, h3_hash); 
+    strcat(hashCode, h2_hash); 
+    strcat(hashCode, h4_hash);
 }
 
 int main(int argc, char *argv[]) {
@@ -219,7 +194,7 @@ int main(int argc, char *argv[]) {
     }
 
     char hashCode[MAX_HASH_CODE_LEN] = "";
-    getHashCode(imagem, altura, largura, hashCode);
+    getHashCode(imagem, 0, 0, altura, largura, hashCode);
 
     printf("\nCódigo gerado: %s\n", hashCode);
     return 0;
